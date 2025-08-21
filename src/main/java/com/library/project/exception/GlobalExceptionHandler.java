@@ -17,4 +17,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> handleGeneralError(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Something went wrong: " + ex.getMessage());
     }
+
+    @ExceptionHandler(BookNotFoundException.class)
+    public ResponseEntity<String> handleBookNotFound(BookNotFoundException bex){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(bex.getMessage());
+    }
 }
