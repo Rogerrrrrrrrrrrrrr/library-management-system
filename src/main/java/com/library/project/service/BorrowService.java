@@ -57,6 +57,10 @@ public class BorrowService {
         if (borrowRepository.existsByUser_UserIdAndBook_BookIdAndStatus(userId, bookId, BorrowRecord.Status.BORROWED)) {
             throw new DuplicateBorrowException("User already borrowed this book");
         }
+        if (book.isDeleted()) {
+            throw new RuntimeException("Cannot borrow a deleted book");
+        }
+
         book.setQuantity(book.getQuantity() - 1);
 
         if (book.getQuantity() == 0) {

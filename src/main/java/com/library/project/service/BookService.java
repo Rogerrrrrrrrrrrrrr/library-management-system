@@ -83,6 +83,11 @@ public class BookService {
             throw new BookDeletionException("Cannot delete a borrowed book");
         }
         book.setDeleted(true);
+        //marking status of book is deleted
+        if(book.isDeleted()){
+            book.setStatus(Book.Status.DELETED);
+        }
+
         bookRepository.save(book);
     }
 

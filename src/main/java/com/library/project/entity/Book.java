@@ -51,7 +51,7 @@ public class Book {
     private Status status;
 
     public enum Status{
-        ISSUED,AVAILABLE
+        ISSUED,AVAILABLE,DELETED
     }
 
     public long getBookId() {
