@@ -20,7 +20,7 @@ public class UserController {
     public ResponseEntity<List<User>> getAllUsers(){
         List<User> usersList = userService.getAllUser();
         try {
-            if (usersList.size()<=0){
+            if (usersList.isEmpty()){
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
         }catch (Exception e){
@@ -65,7 +65,7 @@ public class UserController {
     public ResponseEntity<Void> deleteUsers(@PathVariable("id") long id){
         try {
             userService.deleteUser(id);
-            return ResponseEntity.status(HttpStatus.OK).build();
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         }catch (Exception e){
             e.printStackTrace();
         }

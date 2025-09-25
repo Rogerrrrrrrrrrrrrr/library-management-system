@@ -1,6 +1,7 @@
 package com.library.project.service;
 
 import com.library.project.entity.Book;
+import com.library.project.exception.BookDeletionException;
 import com.library.project.exception.BookNotFoundException;
 import com.library.project.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +13,7 @@ import java.util.Optional;
 
 @Service
 public class BookService {
-
+//keep architrcture / patterns same as Optional Chaining
     @Autowired
     private BookRepository bookRepository;
 
@@ -33,7 +34,7 @@ public class BookService {
     public Book updateBook(Long id, Book book){
         Book existingBook = bookRepository.findById(id)
             .orElseThrow(()-> new BookNotFoundException("Book with " + id + " not found"));
-
+    //use builder pattern here
         existingBook.setTitle(book.getTitle());
         existingBook.setAuthor(book.getAuthor());
 
@@ -47,9 +48,11 @@ public class BookService {
         return bookRepository.save(existingBook);
     }
 
+
     public void deleteBook(Long id) {
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new BookNotFoundException("Book with " + id + " not found"));
+
         if (book.getStatus() == Book.Status.ISSUED) {
             throw new BookDeletionException("Cannot delete a borrowed book");
         }

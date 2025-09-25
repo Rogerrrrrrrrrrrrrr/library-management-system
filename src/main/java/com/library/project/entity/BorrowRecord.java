@@ -27,6 +27,7 @@ public class BorrowRecord {
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date issuedDate;
+
     @Temporal(TemporalType.TIMESTAMP)
     private Date returnDate;
     @Enumerated(EnumType.STRING)
