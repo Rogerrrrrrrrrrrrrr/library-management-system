@@ -70,14 +70,14 @@ public class UserService {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
 
-        existingUser = existingUser.toBuilder()
-                .name(user.getName())
-                .email(user.getEmail())
-                        .build();
-        //existingUser.setName(user.getName());
-        //existingUser.setEmail(user.getEmail());
+        //Lombok is not working in this machine
+//        existingUser = existingUser.toBuilder()
+//                .name(user.getName())
+//                .email(user.getEmail())
+//                        .build();
+        existingUser.setName(user.getName());
+        existingUser.setEmail(user.getEmail());
 
-        //remove this from here
         existingUser.setRole(user.getRole());
         //only admin can update the role--handled from frontend code
         return userRepository.save(existingUser);

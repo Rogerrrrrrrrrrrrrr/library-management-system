@@ -29,7 +29,7 @@ public class BookController {
         return ResponseEntity.of(Optional.of(bookList));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("api/books/{id}")
     public ResponseEntity<?> getBookById(@PathVariable("id") Long id) {
         try {
             Book book = bookService.getBookById(id);
@@ -47,7 +47,7 @@ public class BookController {
     }
 
 
-    @PostMapping
+    @PostMapping("/api/books")
     public ResponseEntity<?> createBook(@RequestBody Book book) {
         try {
             if (book.getTitle() == null || book.getTitle().isEmpty()) {
@@ -56,8 +56,10 @@ public class BookController {
             if (book.getAuthor() == null || book.getAuthor().isEmpty()) {
                 return ResponseEntity.badRequest().body("Author is required");
             }
-            if (book.getQuantity() < 0) {
-                return ResponseEntity.badRequest().body("Quantity cannot be negative");
+
+            if (book.getQuantity() == null || book.getQuantity() < 0) {
+                return ResponseEntity.badRequest()
+                        .body("check quantity either it is not provided or cannot be negative");
             }
 
             Book created = bookService.createBook(book);
@@ -66,7 +68,7 @@ public class BookController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
-        catch (Exception e) {
+         catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error while creating book");
@@ -85,24 +87,34 @@ public class BookController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
             return ResponseEntity.ok(updated);
-        } catch (Exception e) {
+        }
+        catch (BookNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+
+        } catch (IllegalArgumentException e) {
+            // Business logic violation, like negative quantity or invalid status
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+
+        }
+        catch (Exception e) {
             e.printStackTrace();
             //System.out.println("Incoming quantity: " + book.getQuantity());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Something went wrong while updating the book.");
         }
         //        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
 
     @DeleteMapping("api/books/{id}")
-    public ResponseEntity<Void> deleteBook(@PathVariable("id") long id){
+    public ResponseEntity<?> deleteBook(@PathVariable("id") long id){
         try{
             //validate if book is borrowed or not before deleting--handled in service
             //bookService.getBookById(id);
             //redundant usage of getBookById-cleared
 
             bookService.deleteBook(id);
-            return ResponseEntity.status(HttpStatus.OK).build();
+            return ResponseEntity.status(HttpStatus.OK).body("Book with id " + id + " has been deleted");
         }catch (BookNotFoundException e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             //e.printStackTrace();

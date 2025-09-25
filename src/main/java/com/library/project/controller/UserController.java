@@ -1,6 +1,7 @@
 package com.library.project.controller;
 
 import com.library.project.entity.User;
+import com.library.project.exception.UserNotFoundException;
 import com.library.project.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -41,15 +42,21 @@ public class UserController {
 
 
     @PostMapping("/api/users")
-    public ResponseEntity<User> createUsers(@RequestBody User users){
+    public ResponseEntity<?> createUsers(@RequestBody User users){
         User createUser = null;
         try{
             createUser=userService.createUser(users);
             return ResponseEntity.status(HttpStatus.CREATED).body(createUser);
-        }catch (Exception e){
-            e.printStackTrace();
         }
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        catch (IllegalArgumentException e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            return ResponseEntity
+                    .status(HttpStatus.NO_CONTENT).body("Something went wrong.Please try later");
+        }
+
     }
 
     @PutMapping("/api/users/{id}")
@@ -63,13 +70,21 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
     @DeleteMapping("/api/users/{id}")
-    public ResponseEntity<Void> deleteUsers(@PathVariable("id") long id){
+    public ResponseEntity<?> deleteUsers(@PathVariable("id") long id){
         try {
             userService.deleteUser(id);
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        }catch (Exception e){
-            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("User with id " + id +
+                    " has been deleted");
         }
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        catch (UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+        catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
     }
 }

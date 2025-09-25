@@ -25,9 +25,10 @@ public class BookService {
         if (book.getAuthor() == null || book.getAuthor().trim().isEmpty()) {
             throw new IllegalArgumentException("Book author cannot be empty");
         }
-        if (book.getQuantity() < 0) {
-            throw new IllegalArgumentException("Book quantity cannot be negative");
+        if (book.getQuantity() == null || book.getQuantity() < 0) {
+            throw new IllegalArgumentException("Book quantity must be provided and non-negative");
         }
+
         if (book.getIsbn() != null && bookRepository.findByIsbn(book.getIsbn()).isPresent()) {
             throw new IllegalArgumentException("Book with ISBN already exists");
         }

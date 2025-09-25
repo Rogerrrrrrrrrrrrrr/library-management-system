@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> handleBookNotFound(BookNotFoundException bex){
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(bex.getMessage());
     }
-    @ExceptionHandler(BookNotFoundException.class)
+    @ExceptionHandler(BookDeletionException.class)
     public ResponseEntity<String> handleBorrowNotFound(BookDeletionException bex){
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(bex.getMessage());
     }

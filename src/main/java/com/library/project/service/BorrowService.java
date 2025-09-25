@@ -42,29 +42,46 @@ public class BorrowService {
 //        if (borrowRepository.existsByBook_BookIdAndStatus(bookId, BorrowRecord.Status.BORROWED)) {
 //            throw new RuntimeException("Book is already borrowed");
 //        }
-        if (book.getStatus() == Book.Status.ISSUED) {
-            throw new RuntimeException("Book is already borrowed");
+        //removing due to bug in case qty is 5 and status is issued
+//        if (book.getStatus() == Book.Status.ISSUED) {
+//            throw new RuntimeException("Book is already borrowed");
+//        }
+
+        if (book.getQuantity() <= 0) {
+            throw new RuntimeException("No copies available to borrow");
         }
+        if (book.isDeleted()) {
+            throw new RuntimeException("Cannot borrow a deleted book");
+        }
+
         if (borrowRepository.existsByUser_UserIdAndBook_BookIdAndStatus(userId, bookId, BorrowRecord.Status.BORROWED)) {
             throw new DuplicateBorrowException("User already borrowed this book");
         }
-        //use builder pattern
-//        BorrowRecord borrowRecord = new BorrowRecord();
-//        borrowRecord.setUser(user);
-//        borrowRecord.setBook(book);
-//        borrowRecord.setIssuedDate(new Date());
-//        borrowRecord.setStatus(BorrowRecord.Status.BORROWED);
-//
-//        book.setStatus(Book.Status.ISSUED);
-//        bookRepository.save(book);
-//
+        book.setQuantity(book.getQuantity() - 1);
+
+        if (book.getQuantity() == 0) {
+            book.setStatus(Book.Status.ISSUED);
+        } else {
+            book.setStatus(Book.Status.AVAILABLE);
+        }
+
+        BorrowRecord borrowRecord = new BorrowRecord();
+        borrowRecord.setUser(user);
+        borrowRecord.setBook(book);
+        borrowRecord.setIssuedDate(new Date());
+        borrowRecord.setStatus(BorrowRecord.Status.BORROWED);
+
+
+
+
+////use builder pattern
 //        return borrowRepository.save(borrowRecord);
-        BorrowRecord borrowRecord = BorrowRecord.builder()
-                .user(user)
-                .book(book)
-                .issuedDate(new Date())
-                .status(BorrowRecord.Status.BORROWED)
-                .build();
+//        BorrowRecord borrowRecord = BorrowRecord.builder()
+//                .user(user)
+//                .book(book)
+//                .issuedDate(new Date())
+//                .status(BorrowRecord.Status.BORROWED)
+//                .build();
 
         book.setStatus(Book.Status.ISSUED);
         bookRepository.save(book);
@@ -90,7 +107,12 @@ public class BorrowService {
         if (book == null) {
             throw new BookNotFoundException("Book associated with borrow record not found");
         }
-        book.setStatus(Book.Status.AVAILABLE);
+
+        book.setQuantity(book.getQuantity() + 1);
+
+        if (book.getQuantity() > 0) {
+            book.setStatus(Book.Status.AVAILABLE);
+        }
         bookRepository.save(book);
 
         return borrowRepository.save(borrowRecord);
