@@ -28,65 +28,70 @@ public class BorrowService {
     @Autowired
     private UserRepository userRepository;
 
-    //used to create records
     @Transactional
     public BorrowRecord borrowBook(Long userId, Long bookId) {
-        //while creating records, we have to change status,issued date and user details
         User user = userRepository.findById(userId)
-                .orElseThrow(()->new RuntimeException("User Not Found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
         Book book = bookRepository.findById(bookId)
-                .orElseThrow(()->new RuntimeException("Book Not F0und"));
-
-        // Check availability
-        if (borrowRepository.existsByBook_BookIdAndStatus(bookId, BorrowRecord.Status.BORROWED)) {
-            throw new BookNotFoundException("Book is already borrowed");
+                .orElseThrow(() -> new RuntimeException("Book not found"));
+        //unnecessary DB calls
+//        if (borrowRepository.existsByBook_BookIdAndStatus(bookId, BorrowRecord.Status.BORROWED)) {
+//            throw new RuntimeException("Book is already borrowed");
+//        }
+        if (book.getStatus() == Book.Status.ISSUED) {
+            throw new RuntimeException("Book is already borrowed");
         }
-
-        // Check duplicate borrow by same user
         if (borrowRepository.existsByUser_UserIdAndBook_BookIdAndStatus(userId, bookId, BorrowRecord.Status.BORROWED)) {
             throw new DuplicateBorrowException("User already borrowed this book");
         }
+        //use builder pattern
+//        BorrowRecord borrowRecord = new BorrowRecord();
+//        borrowRecord.setUser(user);
+//        borrowRecord.setBook(book);
+//        borrowRecord.setIssuedDate(new Date());
+//        borrowRecord.setStatus(BorrowRecord.Status.BORROWED);
+//
+//        book.setStatus(Book.Status.ISSUED);
+//        bookRepository.save(book);
+//
+//        return borrowRepository.save(borrowRecord);
+        BorrowRecord borrowRecord = BorrowRecord.builder()
+                .user(user)
+                .book(book)
+                .issuedDate(new Date())
+                .status(BorrowRecord.Status.BORROWED)
+                .build();
 
-        BorrowRecord borrowRecord = new BorrowRecord();
-
-        borrowRecord.setUser(user);
-        borrowRecord.setBook(book);
-        borrowRecord.setIssuedDate(new Date());
-        borrowRecord.setStatus(BorrowRecord.Status.BORROWED);
-
-        //update status
-        book.setStatus(Book.Status.ISSUED.ISSUED);
+        book.setStatus(Book.Status.ISSUED);
         bookRepository.save(book);
 
         return borrowRepository.save(borrowRecord);
     }
 
     @Transactional
-  public BorrowRecord returnBook(Long recordId){
-        //whenever a book is returned, its returned date should be there and its status should be updated
-      BorrowRecord borrowRecord = borrowRepository.findById(recordId)
-              .orElseThrow(()-> new RuntimeException("Borrow record not found"));
+    public BorrowRecord returnBook(Long recordId) {
+        BorrowRecord borrowRecord = borrowRepository.findById(recordId)
+                .orElseThrow(() -> new RuntimeException("Borrow record not found"));
 
         if (borrowRecord.getStatus() != BorrowRecord.Status.BORROWED) {
             throw new InvalidReturnException("Book is already returned");
         }
 
-      borrowRecord.setReturnDate(new Date());
-      borrowRecord.setStatus(BorrowRecord.Status.RETURNED);
+        borrowRecord.setReturnDate(new Date());
+        borrowRecord.setStatus(BorrowRecord.Status.RETURNED);
 
         Book book = borrowRecord.getBook();
         book.setStatus(Book.Status.AVAILABLE);
         bookRepository.save(book);
-      return borrowRepository.save(borrowRecord);
+
+        return borrowRepository.save(borrowRecord);
     }
 
-    public List<BorrowRecord> getBorrowRecordsByUser(Long userId){
-        //since no method,hence using custom method
-        //we have to get records of all user
+    public List<BorrowRecord> getBorrowRecordsByUser(Long userId) {
         return borrowRepository.findByUser_UserId(userId);
     }
 
-    public List<BorrowRecord> getBorrowRecordsByBook(Long bookId){
-    return borrowRepository.findByBook_BookId(bookId);
+    public List<BorrowRecord> getBorrowRecordsByBook(Long bookId) {
+        return borrowRepository.findByBook_BookId(bookId);
     }
 }

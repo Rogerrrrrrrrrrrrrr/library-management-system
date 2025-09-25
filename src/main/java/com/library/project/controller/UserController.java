@@ -52,7 +52,7 @@ public class UserController {
     }
 
     @PutMapping("/api/users/{id}")
-    public ResponseEntity<User> updateUsers(@RequestBody User user,@PathVariable("id")long id){
+    public ResponseEntity<User> updateUsers(@RequestBody User user,@PathVariable("id") Long id){
         try{
             userService.updateUser(user,id);
             return ResponseEntity.status(HttpStatus.OK).build();
@@ -64,7 +64,7 @@ public class UserController {
     @DeleteMapping("/api/users/{id}")
     public ResponseEntity<Void> deleteUsers(@PathVariable("id") long id){
         try {
-            this.userService.deleteUser(id);
+            userService.deleteUser(id);
             return ResponseEntity.status(HttpStatus.OK).build();
         }catch (Exception e){
             e.printStackTrace();

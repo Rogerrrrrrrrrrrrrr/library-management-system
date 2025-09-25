@@ -6,7 +6,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "users")
-
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 
@@ -16,6 +16,16 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
     private String name;
+
+    private String password;
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
     @Column(unique = true)
     private String email;
