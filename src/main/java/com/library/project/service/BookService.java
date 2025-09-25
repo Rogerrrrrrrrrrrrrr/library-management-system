@@ -17,10 +17,27 @@ public class BookService {
     @Autowired
     private BookRepository bookRepository;
 
-    public Book createBook(Book book){
+    public Book createBook(Book book) {
         //add validations before accessing DB
-        return this.bookRepository.save(book);
+        if (book.getTitle() == null || book.getTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("Book title cannot be empty");
+        }
+        if (book.getAuthor() == null || book.getAuthor().trim().isEmpty()) {
+            throw new IllegalArgumentException("Book author cannot be empty");
+        }
+        if (book.getQuantity() < 0) {
+            throw new IllegalArgumentException("Book quantity cannot be negative");
+        }
+        if (book.getIsbn() != null && bookRepository.findByIsbn(book.getIsbn()).isPresent()) {
+            throw new IllegalArgumentException("Book with ISBN already exists");
+        }
+        if (book.getStatus() == null) {
+            book.setStatus(Book.Status.AVAILABLE);
+        }
+
+        return bookRepository.save(book);
     }
+
 
     public Book getBookById(Long id){
         return bookRepository.findById(id)
@@ -34,15 +51,23 @@ public class BookService {
     public Book updateBook(Long id, Book book){
         Book existingBook = bookRepository.findById(id)
             .orElseThrow(()-> new BookNotFoundException("Book with " + id + " not found"));
+
+        if (book.getQuantity()<0){
+            throw new IllegalArgumentException("Book quantity cannot be negative");
+
+        }
+        if (book.getStatus() == Book.Status.ISSUED && book.getQuantity() <= 0) {
+            throw new IllegalArgumentException("Cannot set book status to ISSUED when no copies are available");
+        }
     //use builder pattern here
         existingBook.setTitle(book.getTitle());
         existingBook.setAuthor(book.getAuthor());
 
         existingBook.setCategory(book.getCategory());
 
-        System.out.println("Incoming quantity: " + book.getQuantity());
+        //System.out.println("Incoming quantity: " + book.getQuantity());
         existingBook.setQuantity(book.getQuantity());
-        System.out.println("Incoming quantity: " + book.getQuantity());
+        //System.out.println("Incoming quantity: " + book.getQuantity());
         existingBook.setStatus(book.getStatus());
 
         return bookRepository.save(existingBook);
@@ -69,6 +94,9 @@ public class BookService {
         Book book = bookRepository.findById(id)
                 .orElseThrow(()-> new BookNotFoundException("Book with " + id + " not found"));
 
+        if (book.getStatus() == Book.Status.ISSUED && book.getQuantity() <= 0) {
+            throw new IllegalStateException("Book is already fully borrowed");
+        }
         if (book.getQuantity()<=0){
             throw new IllegalStateException("No books available to borrorw");
         }
@@ -82,8 +110,12 @@ public class BookService {
                 .orElseThrow(() -> new BookNotFoundException("Book with " + id + " not found"));
 
         book.setQuantity(book.getQuantity() + 1);
+        if (book.getStatus() == Book.Status.ISSUED && book.getQuantity() > 0) {
+            book.setStatus(Book.Status.AVAILABLE);
+        }
 
         return bookRepository.save(book);
     }
+
 
 }

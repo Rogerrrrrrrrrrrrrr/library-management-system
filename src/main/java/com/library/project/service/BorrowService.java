@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class BorrowService {
@@ -30,8 +31,11 @@ public class BorrowService {
 
     @Transactional
     public BorrowRecord borrowBook(Long userId, Long bookId) {
+
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new RuntimeException("Book not found"));
         //unnecessary DB calls
@@ -70,6 +74,7 @@ public class BorrowService {
 
     @Transactional
     public BorrowRecord returnBook(Long recordId) {
+
         BorrowRecord borrowRecord = borrowRepository.findById(recordId)
                 .orElseThrow(() -> new RuntimeException("Borrow record not found"));
 
@@ -80,7 +85,11 @@ public class BorrowService {
         borrowRecord.setReturnDate(new Date());
         borrowRecord.setStatus(BorrowRecord.Status.RETURNED);
 
+
         Book book = borrowRecord.getBook();
+        if (book == null) {
+            throw new BookNotFoundException("Book associated with borrow record not found");
+        }
         book.setStatus(Book.Status.AVAILABLE);
         bookRepository.save(book);
 

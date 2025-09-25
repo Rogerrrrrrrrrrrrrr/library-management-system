@@ -5,14 +5,12 @@ import com.library.project.exception.BookNotFoundException;
 import com.library.project.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @RestController
@@ -24,23 +22,21 @@ public class BookController {
     @GetMapping(value = "api/books")
     public ResponseEntity<List<Book>> getAllBook(){
         List<Book> bookList = bookService.getAllBook();
-        try{
-            if (CollectionUtils.isEmpty(bookList)){
+
+            if (CollectionUtils.isEmpty(bookList)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ArrayList<>());
             }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
         return ResponseEntity.of(Optional.of(bookList));
     }
 
-    @GetMapping(value = "api/books/{id}")
-    public ResponseEntity<?> getBookById(@PathVariable("id") Long id){
-        Book b = bookService.getBookById(id);
-        if (Objects.isNull(b)){
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getBookById(@PathVariable("id") Long id) {
+        try {
+            Book book = bookService.getBookById(id);
+            return ResponseEntity.ok(book);
+        } catch (BookNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
-        return ResponseEntity.of(Optional.of(b));
     }
 
     @GetMapping("api/isbn/{isbn}")
@@ -51,21 +47,39 @@ public class BookController {
     }
 
 
-    @PostMapping("api/books")
-    public ResponseEntity<Book> createBook(@RequestBody Book book) {
+    @PostMapping
+    public ResponseEntity<?> createBook(@RequestBody Book book) {
         try {
-//          createBook =  bookService.createBook(book);
-          return ResponseEntity.status(HttpStatus.CREATED).body( bookService.createBook(book));
-        } catch (Exception e) {
-            e.printStackTrace();
+            if (book.getTitle() == null || book.getTitle().isEmpty()) {
+                return ResponseEntity.badRequest().body("Title is required");
+            }
+            if (book.getAuthor() == null || book.getAuthor().isEmpty()) {
+                return ResponseEntity.badRequest().body("Author is required");
+            }
+            if (book.getQuantity() < 0) {
+                return ResponseEntity.badRequest().body("Quantity cannot be negative");
+            }
+
+            Book created = bookService.createBook(book);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error while creating book");
+        }
     }
 
 
     @PutMapping("api/books/{id}")
-    public ResponseEntity<Book> updateBook(@PathVariable("id") long id,@RequestBody Book book){
+    public ResponseEntity<?> updateBook(@PathVariable("id") long id, @RequestBody Book book){
         try {
+            if (book.getQuantity() < 0) {
+                return ResponseEntity.badRequest().body("Quantity cannot be negative");
+            }
             Book updated = bookService.updateBook(id, book);
             if (updated == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -73,7 +87,7 @@ public class BookController {
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("Incoming quantity: " + book.getQuantity());
+            //System.out.println("Incoming quantity: " + book.getQuantity());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
         //        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -83,9 +97,9 @@ public class BookController {
     @DeleteMapping("api/books/{id}")
     public ResponseEntity<Void> deleteBook(@PathVariable("id") long id){
         try{
-            //validate if book is borrowed or not before deleting
+            //validate if book is borrowed or not before deleting--handled in service
             //bookService.getBookById(id);
-            //redundant usage of getBookById
+            //redundant usage of getBookById-cleared
 
             bookService.deleteBook(id);
             return ResponseEntity.status(HttpStatus.OK).build();

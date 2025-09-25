@@ -5,7 +5,8 @@ import com.library.project.exception.UserNotFoundException;
 import com.library.project.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.List;//"^[A-Za-z0-9+_.-]+@(.+)$"
+import java.util.List;//
+import java.util.Optional;
 
 @Service
 public class UserService {
@@ -38,6 +39,9 @@ public class UserService {
         if (user.getPassword() == null || user.getPassword().length() < 8) {
             throw new IllegalArgumentException("Password must be at least 8 characters long");
         }
+        if (!user.getPassword().matches("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).{8,}$")) {
+            throw new IllegalArgumentException("Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character");
+        }
 
         if (user.getRole() == null) {
             user.setRole(User.Role.STUDENT);
@@ -47,7 +51,7 @@ public class UserService {
     }
 
     private boolean isValidEmail(String email) {
-        return email.matches("");
+        return email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
     }
 
 
@@ -85,14 +89,16 @@ public class UserService {
         if (user.getRole()== User.Role.ADMIN){
             throw new IllegalArgumentException("Admin users cannot be deleted");
         }
+//        if (!borrowRepository.findByUser_UserId(user.getUserId()).isEmpty()) {
+//            throw new IllegalStateException("User has active borrow records, cannot be deleted");
+//        }
+
         userRepository.deleteById(id);
     }
 
-    public User validateUser(String email, String password) {
-        User user = userRepository.findByEmail(email);
-        if (user != null && user.getPassword().equals(password)) {
-            return user;
-        }
-        return null;
+    public Optional<User> validateUser(String email, String password) {
+        return Optional.ofNullable(userRepository.findByEmail(email))
+                .filter(user -> user.getPassword().equals(password));
     }
+
 }

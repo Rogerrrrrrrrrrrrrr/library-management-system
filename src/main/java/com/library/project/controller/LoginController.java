@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Optional;
+
 @RestController
 public class LoginController {
 
@@ -18,8 +20,8 @@ public class LoginController {
     @PostMapping("/api/login")
     public ResponseEntity<?> login(@RequestBody User loginRequest){
         System.out.println("email is " + loginRequest.getEmail() + "password is " + loginRequest.getPassword());
-        User user = userService.validateUser(loginRequest.getEmail(), loginRequest.getPassword());
-        if (user!=null){
+        Optional<User> user = userService.validateUser(loginRequest.getEmail(), loginRequest.getPassword());
+        if (user.isPresent()){
             return ResponseEntity.ok(user);
         }else{
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
