@@ -9,33 +9,35 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
+@RequestMapping("/api")
 @RestController
 public class BorrowController {
     @Autowired
     private BorrowService borrowService;
 
-    @GetMapping(value = "/api/user/{userId}")
+    @GetMapping(value = "/user/{userId}")
     public ResponseEntity<List<BorrowRecord>> getRecordsByUser(@PathVariable Long userId){
     List<BorrowRecord> borrowRecords = borrowService.getBorrowRecordsByUser(userId);
-    return new ResponseEntity<>(borrowRecords, HttpStatus.OK);
+        return ResponseEntity.of(Optional.ofNullable(borrowRecords));
     }
 
-    @GetMapping(value = "/api/book/{bookId}")
+    @GetMapping(value = "/book/{bookId}")
     public ResponseEntity<List<BorrowRecord>> getRecordsByBook(@PathVariable Long bookId){
         List<BorrowRecord> borrowRecords = borrowService.getBorrowRecordsByBook(bookId);
-        return new ResponseEntity<>(borrowRecords,HttpStatus.OK);
+        return ResponseEntity.of(Optional.ofNullable(borrowRecords));
     }
 
-    @PostMapping("/api/records")
+    @PostMapping("/records")
     public ResponseEntity<BorrowRecord> borrowBook(@RequestParam Long userId,@RequestParam Long bookId){
         BorrowRecord borrowRecord = borrowService.borrowBook(userId, bookId);
-        return new ResponseEntity<>(borrowRecord,HttpStatus.CREATED);
+        return ResponseEntity.status(201).body(borrowRecord);
     }
 
-    @PutMapping("/api/{recordId}/return")
+    @PutMapping("/{recordId}/return")
     public ResponseEntity<BorrowRecord> returnBook(@PathVariable Long recordId) {
         BorrowRecord record = borrowService.returnBook(recordId);
-        return new ResponseEntity<>(record, HttpStatus.OK);
+        return ResponseEntity.ok(record);
     }
 }

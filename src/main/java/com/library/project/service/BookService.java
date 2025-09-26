@@ -10,32 +10,28 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 @Service
 public class BookService {
 //keep architrcture / patterns same as Optional Chaining
+    //adding logger to debug
+    private static final Logger logs = Logger.getLogger(BookService.class.getName());
+
     @Autowired
     private BookRepository bookRepository;
 
     public Book createBook(Book book) {
+        logs.info("Creating book: {} " + book.getTitle());
+        validateBookForCreate(book);
         //add validations before accessing DB
-        if (book.getTitle() == null || book.getTitle().trim().isEmpty()) {
-            throw new IllegalArgumentException("Book title cannot be empty");
-        }
-        if (book.getAuthor() == null || book.getAuthor().trim().isEmpty()) {
-            throw new IllegalArgumentException("Book author cannot be empty");
-        }
-        if (book.getQuantity() == null || book.getQuantity() < 0) {
-            throw new IllegalArgumentException("Book quantity must be provided and non-negative");
-        }
-
         if (book.getIsbn() != null && bookRepository.findByIsbn(book.getIsbn()).isPresent()) {
             throw new IllegalArgumentException("Book with ISBN already exists");
         }
         if (book.getStatus() == null) {
+            logs.fine("Book status not provided, setting default AVAILABLE");
             book.setStatus(Book.Status.AVAILABLE);
         }
-
         return bookRepository.save(book);
     }
 
@@ -53,13 +49,8 @@ public class BookService {
         Book existingBook = bookRepository.findById(id)
             .orElseThrow(()-> new BookNotFoundException("Book with " + id + " not found"));
 
-        if (book.getQuantity()<0){
-            throw new IllegalArgumentException("Book quantity cannot be negative");
+        validateBookForUpdate(book);
 
-        }
-        if (book.getStatus() == Book.Status.ISSUED && book.getQuantity() <= 0) {
-            throw new IllegalArgumentException("Cannot set book status to ISSUED when no copies are available");
-        }
     //use builder pattern here
         existingBook.setTitle(book.getTitle());
         existingBook.setAuthor(book.getAuthor());
@@ -84,9 +75,9 @@ public class BookService {
         }
         book.setDeleted(true);
         //marking status of book is deleted
-        if(book.isDeleted()){
-            book.setStatus(Book.Status.DELETED);
-        }
+//        if(book.isDeleted()){
+//            book.setStatus(Book.Status.DELETED);
+//        }
 
         bookRepository.save(book);
     }
@@ -96,19 +87,19 @@ public class BookService {
     }
 
 
-    public Book borrowBook(Long id){
+    public Book borrowBook(Long id) {
         Book book = bookRepository.findById(id)
-                .orElseThrow(()-> new BookNotFoundException("Book with " + id + " not found"));
+                .orElseThrow(() -> new BookNotFoundException("Book with " + id + " not found"));
 
+        if (book.getQuantity() <= 0) {
+            throw new IllegalStateException("No books available to borrow");
+        }
         if (book.getStatus() == Book.Status.ISSUED && book.getQuantity() <= 0) {
             throw new IllegalStateException("Book is already fully borrowed");
         }
-        if (book.getQuantity()<=0){
-            throw new IllegalStateException("No books available to borrorw");
-        }
-        book.setQuantity(book.getQuantity()-1);
-        return bookRepository.save(book);
 
+        book.setQuantity(book.getQuantity() - 1);
+        return bookRepository.save(book);
     }
 
     public Book returnBook(Long id) {
@@ -116,11 +107,32 @@ public class BookService {
                 .orElseThrow(() -> new BookNotFoundException("Book with " + id + " not found"));
 
         book.setQuantity(book.getQuantity() + 1);
-        if (book.getStatus() == Book.Status.ISSUED && book.getQuantity() > 0) {
+        if (!book.isDeleted() && book.getQuantity() > 0) {
             book.setStatus(Book.Status.AVAILABLE);
         }
 
         return bookRepository.save(book);
+    }
+
+    private void validateBookForCreate(Book book) {
+        if (book.getTitle() == null || book.getTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("Book title cannot be empty");
+        }
+        if (book.getAuthor() == null || book.getAuthor().trim().isEmpty()) {
+            throw new IllegalArgumentException("Book author cannot be empty");
+        }
+        if (book.getQuantity() == null || book.getQuantity() < 0) {
+            throw new IllegalArgumentException("Book quantity must be provided and non-negative");
+        }
+    }
+
+    private void validateBookForUpdate(Book book) {
+        if (book.getQuantity() < 0) {
+            throw new IllegalArgumentException("Book quantity cannot be negative");
+        }
+        if (book.getStatus() == Book.Status.ISSUED && book.getQuantity() <= 0) {
+            throw new IllegalArgumentException("Cannot set book status to ISSUED when no copies are available");
+        }
     }
 
 

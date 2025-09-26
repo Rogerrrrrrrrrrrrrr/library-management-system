@@ -24,6 +24,6 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(BookDeletionException.class)
     public ResponseEntity<String> handleBorrowNotFound(BookDeletionException bex){
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(bex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(bex.getMessage());
     }
 }

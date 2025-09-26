@@ -7,40 +7,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;//
 import java.util.Optional;
-
+import java.util.logging.Logger;
 @Service
 public class UserService {
 
     @Autowired
     private UserRepository userRepository;
 
-
+    private final static java.util.logging.Logger log = Logger.getLogger(UserService.class.getName());
     public User createUser(User user) {
-        if (user == null) {
-            throw new IllegalArgumentException("User cannot be null");
-        }
-
-        if (user.getName() == null || user.getName().isEmpty()) {
-            throw new IllegalArgumentException("Name is required");
-        }
-
-        if (user.getEmail() == null || user.getEmail().isEmpty()) {
-            throw new IllegalArgumentException("Email is required");
-        }
-
-        if (!isValidEmail(user.getEmail())) {
-            throw new IllegalArgumentException("Invalid email format");
-        }
+        log.info(user.getEmail());
+        validateUserForCreate(user);
 
         if (userRepository.existsByEmail(user.getEmail())) {
+            log.warning ("Email already in use: {} " + user.getEmail());
             throw new IllegalArgumentException("Email already in use");
-        }
-
-        if (user.getPassword() == null || user.getPassword().length() < 8) {
-            throw new IllegalArgumentException("Password must be at least 8 characters long");
-        }
-        if (!user.getPassword().matches("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).{8,}$")) {
-            throw new IllegalArgumentException("Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character");
         }
 
         if (user.getRole() == null) {
@@ -54,12 +35,9 @@ public class UserService {
         return email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
     }
 
-
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
-
-
     }
 
     public List<User> getAllUser() {
@@ -77,7 +55,6 @@ public class UserService {
 //                        .build();
         existingUser.setName(user.getName());
         existingUser.setEmail(user.getEmail());
-
         existingUser.setRole(user.getRole());
         //only admin can update the role--handled from frontend code
         return userRepository.save(existingUser);
@@ -85,8 +62,9 @@ public class UserService {
 
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
-                        .orElseThrow(()-> new UserNotFoundException("User with id " + id + " not found"));
-        if (user.getRole()== User.Role.ADMIN){
+                .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
+
+        if (user.getRole() == User.Role.ADMIN) {
             throw new IllegalArgumentException("Admin users cannot be deleted");
         }
 //        if (!borrowRepository.findByUser_UserId(user.getUserId()).isEmpty()) {
@@ -101,4 +79,24 @@ public class UserService {
                 .filter(user -> user.getPassword().equals(password));
     }
 
+    private void validateUserForCreate(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
+        }
+        if (user.getName() == null || user.getName().isEmpty()) {
+            throw new IllegalArgumentException("Name is required");
+        }
+        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        if (!isValidEmail(user.getEmail())) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+        if (user.getPassword() == null || user.getPassword().length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long");
+        }
+        if (!user.getPassword().matches("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).{8,}$")) {
+            throw new IllegalArgumentException("Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character");
+        }
+    }
 }
