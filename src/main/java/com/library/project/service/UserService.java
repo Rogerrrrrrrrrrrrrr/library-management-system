@@ -1,13 +1,19 @@
 package com.library.project.service;
 
+import com.library.project.dto.UserRequestDTO;
+import com.library.project.dto.UserResponseDTO;
 import com.library.project.entity.User;
 import com.library.project.exception.UserNotFoundException;
 import com.library.project.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Collections;
 import java.util.List;//
 import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 @Service
 public class UserService {
 
@@ -15,36 +21,64 @@ public class UserService {
     private UserRepository userRepository;
 
     private final static java.util.logging.Logger log = Logger.getLogger(UserService.class.getName());
-    public User createUser(User user) {
-        log.info(user.getEmail());
-        validateUserForCreate(user);
 
-        if (userRepository.existsByEmail(user.getEmail())) {
-            log.warning ("Email already in use: {} " + user.getEmail());
+    //User Entity to Response
+    public UserResponseDTO toResponseDTO(User user) {
+        return new UserResponseDTO
+                (user.getUserId(), user.getName(), user.getEmail(), user.getRole());
+    }
+
+    //Request to User Entity
+    public User fromRequestDTO(UserRequestDTO dto) {
+        User user = new User();
+        user.setName(dto.getName());
+        user.setEmail(dto.getEmail());
+        user.setPassword(dto.getPassword());
+        user.setRole(dto.getRole() != null ? dto.getRole() : User.Role.STUDENT);
+        return user;
+    }
+
+
+    public UserResponseDTO createUser(UserRequestDTO userRequestDTO) {
+        log.info(userRequestDTO.getEmail());
+        validateUserForCreate(userRequestDTO);
+
+        if (userRepository.existsByEmail(userRequestDTO.getEmail())) {
+            log.warning ("Email already in use: {} " + userRequestDTO.getEmail());
             throw new IllegalArgumentException("Email already in use");
         }
 
-        if (user.getRole() == null) {
-            user.setRole(User.Role.STUDENT);
+        if (userRequestDTO.getRole() == null) {
+            userRequestDTO.setRole(User.Role.STUDENT);
         }
-
-        return userRepository.save(user);
+        User user = fromRequestDTO(userRequestDTO);
+        User savedUser = userRepository.save(user);
+        return toResponseDTO(savedUser);
     }
 
     private boolean isValidEmail(String email) {
         return email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
     }
 
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
+    public UserResponseDTO getUserById(Long id) {
+       User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
+
+       return toResponseDTO(user);
     }
 
-    public List<User> getAllUser() {
-        return userRepository.findAll();
+    public List<UserResponseDTO> getAllUser() {
+
+        List<User> users = userRepository.findAll();
+        if (users.isEmpty()) {
+            log.info("No users found in the database");
+        }
+        return users.stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    public User updateUser(User user, Long id) {
+    public UserResponseDTO updateUser(UserRequestDTO userRequestDTO, Long id) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
 
@@ -53,12 +87,14 @@ public class UserService {
 //                .name(user.getName())
 //                .email(user.getEmail())
 //                        .build();
-        existingUser.setName(user.getName());
-        existingUser.setEmail(user.getEmail());
-        existingUser.setRole(user.getRole());
+        existingUser.setName(userRequestDTO.getName());
+        existingUser.setEmail(userRequestDTO.getEmail());
+        existingUser.setRole(userRequestDTO.getRole());
         //only admin can update the role--handled from frontend code
-        return userRepository.save(existingUser);
-    }
+        User updatedUser = userRepository.save(existingUser);
+        log.info("User updated successfully: {}" + updatedUser.getEmail());
+
+        return toResponseDTO(updatedUser);    }
 
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
@@ -79,7 +115,7 @@ public class UserService {
                 .filter(user -> user.getPassword().equals(password));
     }
 
-    private void validateUserForCreate(User user) {
+    private void validateUserForCreate(UserRequestDTO user) {
         if (user == null) {
             throw new IllegalArgumentException("User cannot be null");
         }
