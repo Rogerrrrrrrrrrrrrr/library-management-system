@@ -1,6 +1,7 @@
 package com.library.project.testcontroller;
 
 import com.library.project.controller.BorrowController;
+import com.library.project.dto.BorrowRequestDTO;
 import com.library.project.entity.Book;
 import com.library.project.entity.BorrowRecord;
 import com.library.project.entity.User;
@@ -76,13 +77,18 @@ class BorrowControllerTest {
         record.setIssuedDate(new Date());
         record.setStatus(BorrowRecord.Status.BORROWED);
 
-        when(borrowService.borrowBook(1L, 2L)).thenReturn(record);
+        BorrowRequestDTO request = new BorrowRequestDTO();
+        request.setUserId(1L);
+        request.setBookId(2L);
+
+
+        when(borrowService.borrowBook(request)).thenReturn(record);
 
         mockMvc.perform(post("/api/records")
-                        .param("userId", "1")
-                        .param("bookId", "2")
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":1,\"bookId\":2}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.recordId").value(200));
     }
+
 }

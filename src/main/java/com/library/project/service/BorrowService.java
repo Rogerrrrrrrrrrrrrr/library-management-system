@@ -1,5 +1,7 @@
 package com.library.project.service;
 
+import com.library.project.dto.BorrowRequestDTO;
+import com.library.project.dto.BorrowResponseDTO;
 import com.library.project.entity.Book;
 import com.library.project.entity.BorrowRecord;
 import com.library.project.entity.User;
@@ -31,15 +33,57 @@ public class BorrowService {
     @Autowired
     private UserRepository userRepository;
 
-    @Transactional
-    public BorrowRecord borrowBook(Long userId, Long bookId) {
-        log.info("Borrow request received for userId={} and bookId={} " + userId +"  " + bookId);
+    public BorrowResponseDTO toBorrowResponseDTO(BorrowRecord record) {
+        BorrowResponseDTO dto = new BorrowResponseDTO();
+        dto.setRecordId(record.getRecordId());
+        dto.setUserId(record.getUser().getUserId());
+        dto.setUserName(record.getUser().getName());
+        dto.setBookId(record.getBook().getBookId());
+        dto.setBookTitle(record.getBook().getTitle());
+        dto.setIssuedDate(record.getIssuedDate());
+        dto.setReturnDate(record.getReturnDate());
+        dto.setStatus(record.getStatus() != null ? record.getStatus().name() : null);
+        return dto;
+    }
 
-        User user = userRepository.findById(userId)
+    public BorrowRecord fromBorrowRequestDTO(BorrowRequestDTO request) {
+        User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        Book book = bookRepository.findById(bookId)
+        Book book = bookRepository.findById(request.getBookId())
                 .orElseThrow(() -> new BookNotFoundException("Book not found"));
+
+        if (book.getQuantity() <= 0) {
+            throw new IllegalStateException("No copies available to borrow");
+        }
+        if (book.isDeleted()) {
+            throw new IllegalStateException("Cannot borrow a deleted book");
+        }
+
+        if (borrowRepository.existsByUser_UserIdAndBook_BookIdAndStatus(user.getUserId(), book.getBookId(), BorrowRecord.Status.BORROWED)) {
+            throw new DuplicateBorrowException("User already borrowed this book");
+        }
+
+        BorrowRecord borrowRecord = new BorrowRecord();
+        borrowRecord.setUser(user);
+        borrowRecord.setBook(book);
+        borrowRecord.setIssuedDate(new Date());
+        borrowRecord.setStatus(BorrowRecord.Status.BORROWED);
+
+        // Update book quantity and status
+        book.setQuantity(book.getQuantity() - 1);
+        book.setStatus(book.getQuantity() == 0 ? Book.Status.ISSUED : Book.Status.AVAILABLE);
+        bookRepository.save(book);
+
+        return borrowRecord;
+    }
+
+
+        @Transactional
+        public BorrowRecord borrowBook(BorrowRequestDTO request) {
+            log.info("Borrow request received for userId=" + request.getUserId() + ", bookId=" + request.getBookId());
+            BorrowRecord record = fromBorrowRequestDTO(request);
+            log.info("Borrow record created for userId=" + request.getUserId() + ", bookId=" + request.getBookId());
         //unnecessary DB calls
 //        if (borrowRepository.existsByBook_BookIdAndStatus(bookId, BorrowRecord.Status.BORROWED)) {
 //            throw new RuntimeException("Book is already borrowed");
@@ -49,31 +93,7 @@ public class BorrowService {
 //            throw new RuntimeException("Book is already borrowed");
 //        }
 
-        if (book.getQuantity() <= 0) {
-            throw new IllegalStateException("No copies available to borrow");
-        }
-        if (book.isDeleted()) {
-            throw new IllegalStateException("Cannot borrow a deleted book");
-        }
 
-        if (borrowRepository.existsByUser_UserIdAndBook_BookIdAndStatus(userId, bookId, BorrowRecord.Status.BORROWED)) {
-            throw new DuplicateBorrowException("User already borrowed this book");
-        }
-
-
-        book.setQuantity(book.getQuantity() - 1);
-
-        if (book.getQuantity() == 0) {
-            book.setStatus(Book.Status.ISSUED);
-        } else {
-            book.setStatus(Book.Status.AVAILABLE);
-        }
-
-        BorrowRecord borrowRecord = new BorrowRecord();
-        borrowRecord.setUser(user);
-        borrowRecord.setBook(book);
-        borrowRecord.setIssuedDate(new Date());
-        borrowRecord.setStatus(BorrowRecord.Status.BORROWED);
 
 
 
@@ -87,13 +107,8 @@ public class BorrowService {
 //                .status(BorrowRecord.Status.BORROWED)
 //                .build();
 
-        book.setStatus(Book.Status.ISSUED);
-        bookRepository.save(book);
-        log.info("Updating book status and quantity for bookId={} " + bookId);
-        bookRepository.save(book);
 
-        log.info("Borrow record created for userId={} and bookId={} " + userId +" " + bookId);
-        return borrowRepository.save(borrowRecord);
+        return borrowRepository.save(record);
     }
 
     @Transactional

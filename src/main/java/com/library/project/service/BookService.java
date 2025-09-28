@@ -1,5 +1,7 @@
 package com.library.project.service;
 
+import com.library.project.dto.BookRequestDTO;
+import com.library.project.dto.BookResponseDTO;
 import com.library.project.entity.Book;
 import com.library.project.exception.BookDeletionException;
 import com.library.project.exception.BookNotFoundException;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 @Service
 public class BookService {
@@ -21,8 +24,33 @@ public class BookService {
     @Autowired
     private BookRepository bookRepository;
 
-    public Book createBook(Book book) {
-        logs.info("Creating book: {} " + book.getTitle());
+    public BookResponseDTO toBookResponseDTO(Book book) {
+        return new BookResponseDTO(
+                book.getBookId(),
+                book.getTitle(),
+                book.getAuthor(),
+                book.getCategory(),
+                book.getIsbn(),
+                book.getQuantity(),
+                book.getStatus() != null ? book.getStatus().name() : null
+        );
+    }
+
+    public Book fromBookRequestDTO(BookRequestDTO request) {
+        Book book = new Book();
+        book.setTitle(request.getTitle());
+        book.setAuthor(request.getAuthor());
+        book.setCategory(request.getCategory());
+        book.setIsbn(request.getIsbn());
+        book.setQuantity(request.getQuantity());
+        return book;
+    }
+
+    public BookResponseDTO createBook(BookRequestDTO request) {
+
+        logs.info("Creating book: " + request.getTitle());
+
+        Book book = fromBookRequestDTO(request);
         validateBookForCreate(book);
         //add validations before accessing DB
         if (book.getIsbn() != null && bookRepository.findByIsbn(book.getIsbn()).isPresent()) {
@@ -32,24 +60,34 @@ public class BookService {
             logs.fine("Book status not provided, setting default AVAILABLE");
             book.setStatus(Book.Status.AVAILABLE);
         }
-        return bookRepository.save(book);
+        return toBookResponseDTO(bookRepository.save(book));
     }
 
 
-    public Book getBookById(Long id){
-        return bookRepository.findById(id)
+    public BookResponseDTO getBookById(Long id){
+        Book book =  bookRepository.findById(id)
                 .orElseThrow(()-> new BookNotFoundException("Book with " + id + " not found"));
+
+        return toBookResponseDTO(book);
     }
 
-    public List<Book> getAllBook(){
-        return bookRepository.findAll();
+    public List<BookResponseDTO> getAllBook(){
+
+        List<Book> books = bookRepository.findAll();
+        if (books.isEmpty()) {
+            logs.info("No users found in the database");
+        }
+            return bookRepository.findAll()
+                    .stream()
+                    .map(this::toBookResponseDTO)
+                    .collect(Collectors.toList());
     }
 
-    public Book updateBook(Long id, Book book){
+    public BookResponseDTO updateBook(Long id, BookRequestDTO book){
         Book existingBook = bookRepository.findById(id)
             .orElseThrow(()-> new BookNotFoundException("Book with " + id + " not found"));
 
-        validateBookForUpdate(book);
+        validateBookForUpdate(existingBook);
 
     //use builder pattern here
         existingBook.setTitle(book.getTitle());
@@ -60,9 +98,9 @@ public class BookService {
         //System.out.println("Incoming quantity: " + book.getQuantity());
         existingBook.setQuantity(book.getQuantity());
         //System.out.println("Incoming quantity: " + book.getQuantity());
-        existingBook.setStatus(book.getStatus());
+        existingBook.setIsbn(book.getIsbn());
 
-        return bookRepository.save(existingBook);
+        return toBookResponseDTO(bookRepository.save(existingBook));
     }
 
 
@@ -82,12 +120,14 @@ public class BookService {
         bookRepository.save(book);
     }
 
-    public Optional<Book> getBookByIsbn(String isbn) {
-        return bookRepository.findByIsbn(isbn);
+    public Optional<BookResponseDTO> getBookByIsbn(String isbn) {
+        return Optional.ofNullable(bookRepository.findByIsbn(isbn)
+                .orElseThrow(() -> new BookNotFoundException("Book with ISBN " + isbn + " not found")));
     }
 
 
-    public Book borrowBook(Long id) {
+    public BookResponseDTO borrowBook(Long id) {
+
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new BookNotFoundException("Book with " + id + " not found"));
 
@@ -99,10 +139,12 @@ public class BookService {
         }
 
         book.setQuantity(book.getQuantity() - 1);
-        return bookRepository.save(book);
+        book.setStatus(Book.Status.ISSUED);
+
+        return toBookResponseDTO(bookRepository.save(book));
     }
 
-    public Book returnBook(Long id) {
+    public BookResponseDTO returnBook(Long id) {
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new BookNotFoundException("Book with " + id + " not found"));
 
@@ -111,7 +153,7 @@ public class BookService {
             book.setStatus(Book.Status.AVAILABLE);
         }
 
-        return bookRepository.save(book);
+        return toBookResponseDTO(bookRepository.save(book));
     }
 
     private void validateBookForCreate(Book book) {

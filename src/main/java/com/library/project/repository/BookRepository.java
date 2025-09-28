@@ -1,5 +1,6 @@
 package com.library.project.repository;
 
+import com.library.project.dto.BookResponseDTO;
 import com.library.project.entity.Book;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -10,6 +11,6 @@ public interface BookRepository extends JpaRepository<Book,Long> {
 
     List<Book> findByDeletedFalse();
 
-    Optional<Book> findByIsbn(String isbn);
+    Optional<BookResponseDTO> findByIsbn(String isbn);
 
 }

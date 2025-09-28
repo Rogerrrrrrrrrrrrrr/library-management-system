@@ -1,7 +1,8 @@
 package com.library.project.controller;
 
+import com.library.project.dto.BookRequestDTO;
+import com.library.project.dto.BookResponseDTO;
 import com.library.project.entity.Book;
-import com.library.project.exception.BookNotFoundException;
 import com.library.project.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,8 +22,8 @@ public class BookController {
     private BookService bookService;
 
     @GetMapping(value = "books")
-    public ResponseEntity<List<Book>> getAllBook(){
-        List<Book> bookList = bookService.getAllBook();
+    public ResponseEntity<List<BookResponseDTO>> getAllBook(){
+        List<BookResponseDTO> bookList = bookService.getAllBook();
 
             if (CollectionUtils.isEmpty(bookList)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ArrayList<>());
@@ -34,27 +35,27 @@ public class BookController {
     @GetMapping("books/{id}")
     public ResponseEntity<?> getBookById(@PathVariable("id") Long id) {
 
-            Book book = bookService.getBookById(id);
+            BookResponseDTO book = bookService.getBookById(id);
             return ResponseEntity.ok(book);
     }
 
     @GetMapping("isbn/{isbn}")
-    public ResponseEntity<Book> getBookByIsbn(@PathVariable String isbn) {
-        Optional<Book> book = bookService.getBookByIsbn(isbn);
-        return ResponseEntity.of(book);
+    public ResponseEntity<Optional<BookResponseDTO>> getBookByIsbn(@PathVariable String isbn) {
+        Optional<BookResponseDTO> bookResponse = bookService.getBookByIsbn(isbn);
+        return ResponseEntity.ok(bookResponse);
     }
 
 
     @PostMapping("/books")
-    public ResponseEntity<Book> createBook(@RequestBody Book book) {
-        Book created = bookService.createBook(book);
+    public ResponseEntity<BookResponseDTO> createBook(@RequestBody BookRequestDTO book) {
+        BookResponseDTO created = bookService.createBook(book);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
 
     @PutMapping("/books/{id}")
-    public ResponseEntity<Book> updateBook(@PathVariable("id") long id, @RequestBody Book book) {
-        Book updated = bookService.updateBook(id, book);
+    public ResponseEntity<BookResponseDTO> updateBook(@PathVariable("id") long id, @RequestBody BookRequestDTO book) {
+        BookResponseDTO updated = bookService.updateBook(id, book);
         return ResponseEntity.ok(updated);
     }
 
