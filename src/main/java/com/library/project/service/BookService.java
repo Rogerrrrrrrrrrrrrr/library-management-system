@@ -32,7 +32,8 @@ public class BookService {
                 book.getCategory(),
                 book.getIsbn(),
                 book.getQuantity(),
-                book.getStatus() != null ? book.getStatus().name() : null
+                book.getStatus() != null ? book.getStatus().name() : null,
+                book.isDeleted()
         );
     }
 
@@ -121,9 +122,10 @@ public class BookService {
     }
 
     public Optional<BookResponseDTO> getBookByIsbn(String isbn) {
-        return Optional.ofNullable(bookRepository.findByIsbn(isbn)
-                .orElseThrow(() -> new BookNotFoundException("Book with ISBN " + isbn + " not found")));
+        return bookRepository.findByIsbn(isbn)
+                .map(this::toBookResponseDTO);
     }
+
 
 
     public BookResponseDTO borrowBook(Long id) {

@@ -169,4 +169,17 @@ public class BorrowService {
 
         return records;
     }
+    public List<BorrowRecord> getAllBorrowedRecords() {
+        List<BorrowRecord> borrowed = borrowRepository.findAll()
+                .stream()
+                .filter(r -> r.getStatus() == BorrowRecord.Status.BORROWED)
+                .toList();
+
+        if (borrowed.isEmpty()) {
+            throw new RuntimeException("No borrowed records found");
+        }
+
+        return borrowed;
+    }
+
 }

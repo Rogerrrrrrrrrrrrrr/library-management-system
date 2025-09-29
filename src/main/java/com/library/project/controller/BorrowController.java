@@ -52,7 +52,20 @@ public class BorrowController {
         return ResponseEntity.ok(responseList);
     }
 
-    @PostMapping("/records")
+    @GetMapping("/borrowed")
+    public ResponseEntity<List<BorrowResponseDTO>> getAllBorrowed() {
+        List<BorrowRecord> borrowedRecords = borrowService.getAllBorrowedRecords();
+
+        List<BorrowResponseDTO> dtos = borrowedRecords.stream()
+                .map(borrowService::toBorrowResponseDTO)
+                .toList();
+
+        return ResponseEntity.ok(dtos);
+    }
+
+
+
+    @PostMapping("/borrow")
     public ResponseEntity<BorrowResponseDTO> borrowBook(@RequestBody BorrowRequestDTO request) {
         BorrowRecord borrowRecord = borrowService.borrowBook(request);
         BorrowResponseDTO responseDTO = borrowService.toBorrowResponseDTO(borrowRecord);

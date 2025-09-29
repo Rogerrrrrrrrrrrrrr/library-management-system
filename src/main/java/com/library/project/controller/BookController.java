@@ -21,7 +21,7 @@ public class BookController {
     @Autowired
     private BookService bookService;
 
-    @GetMapping(value = "books")
+    @GetMapping(value = "/books")
     public ResponseEntity<List<BookResponseDTO>> getAllBook(){
         List<BookResponseDTO> bookList = bookService.getAllBook();
 
@@ -32,14 +32,14 @@ public class BookController {
         return ResponseEntity.ok(bookList);
     }
 
-    @GetMapping("books/{id}")
+    @GetMapping("/books/{id}")
     public ResponseEntity<?> getBookById(@PathVariable("id") Long id) {
 
             BookResponseDTO book = bookService.getBookById(id);
             return ResponseEntity.ok(book);
     }
 
-    @GetMapping("isbn/{isbn}")
+    @GetMapping("/isbn/{isbn}")
     public ResponseEntity<Optional<BookResponseDTO>> getBookByIsbn(@PathVariable String isbn) {
         Optional<BookResponseDTO> bookResponse = bookService.getBookByIsbn(isbn);
         return ResponseEntity.ok(bookResponse);
@@ -60,7 +60,7 @@ public class BookController {
     }
 
 
-    @DeleteMapping("books/{id}")
+    @DeleteMapping("/books/{id}")
     public ResponseEntity<?> deleteBook(@PathVariable("id") long id){
 
             //validate if book is borrowed or not before deleting--handled in service
