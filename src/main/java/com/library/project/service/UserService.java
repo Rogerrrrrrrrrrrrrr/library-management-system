@@ -7,7 +7,7 @@ import com.library.project.exception.UserNotFoundException;
 import com.library.project.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import org.mindrot.jbcrypt.BCrypt;
 import java.util.Collections;
 import java.util.List;//
 import java.util.Optional;
@@ -19,16 +19,17 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
-
+//@Autowired
+//private PasswordEncoder passwordEncoder;
     private final static java.util.logging.Logger log = Logger.getLogger(UserService.class.getName());
 
-    //User Entity to Response
+    //User Entity --> Response
     public UserResponseDTO toResponseDTO(User user) {
         return new UserResponseDTO
                 (user.getUserId(), user.getName(), user.getEmail(), user.getRole());
     }
 
-    //Request to User Entity
+    //Request --> User Entity
     public User fromRequestDTO(UserRequestDTO dto) {
         User user = new User();
         user.setName(dto.getName());
@@ -52,6 +53,8 @@ public class UserService {
             userRequestDTO.setRole(User.Role.STUDENT);
         }
         User user = fromRequestDTO(userRequestDTO);
+        String hashedPassword = BCrypt.hashpw(userRequestDTO.getPassword(), BCrypt.gensalt());
+        user.setPassword(hashedPassword);
         User savedUser = userRepository.save(user);
         return toResponseDTO(savedUser);
     }
@@ -114,6 +117,13 @@ public class UserService {
         return Optional.ofNullable(userRepository.findByEmail(email))
                 .filter(user -> user.getPassword().equals(password));
     }
+    public boolean validateLogin(String email, String password) {
+        User user = userRepository.findByEmail(email);
+        if (user == null)
+            return false;
+        return BCrypt.checkpw(password, user.getPassword());
+    }
+
 
     private void validateUserForCreate(UserRequestDTO user) {
         if (user == null) {
