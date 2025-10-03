@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 @Service
@@ -112,6 +113,107 @@ public class BorrowService {
     }
 
     @Transactional
+    public BorrowRecord requestBorrow(BorrowRequestDTO request) {
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        Book book = bookRepository.findById(request.getBookId())
+                .orElseThrow(() -> new BookNotFoundException("Book not found"));
+
+        //handling of multiple requests
+        boolean exists = borrowRepository.existsByUser_UserIdAndBook_BookIdAndStatusIn(
+                request.getUserId(),
+                request.getBookId(),
+                List.of(
+                        BorrowRecord.Status.BORROWED,
+                        BorrowRecord.Status.PENDING_BORROW,
+                        BorrowRecord.Status.PENDING_RETURN
+                )
+        );
+
+        if (exists) {
+            throw new IllegalStateException("User already has this book (borrowed, pending borrow, or pending return).");
+        }
+
+
+        boolean hasPendingReturn = borrowRepository.existsByUser_UserIdAndBook_BookIdAndStatus(request.getUserId(), request.getBookId(), BorrowRecord.Status.PENDING_RETURN);
+
+        if (hasPendingReturn) {
+            throw new IllegalStateException("User already has a pending return for this book.");
+        }
+
+
+        if (book.isDeleted()) {
+            throw new IllegalStateException("Cannot borrow a deleted book");
+        }
+
+        // Just create pending record (don’t decrease quantity yet)
+        BorrowRecord record = new BorrowRecord();
+        record.setUser(user);
+        record.setBook(book);
+        record.setStatus(BorrowRecord.Status.PENDING_BORROW);
+        record.setIssuedDate(new Date());
+
+        return borrowRepository.save(record);
+    }
+
+    @Transactional
+    public BorrowRecord approveBorrow(Long recordId) {
+        BorrowRecord record = borrowRepository.findById(recordId)
+                .orElseThrow(() -> new IllegalStateException("Borrow record not found"));
+
+        if (record.getStatus() != BorrowRecord.Status.PENDING_BORROW) {
+            throw new IllegalStateException("This request is not pending borrow approval");
+        }
+
+        Book book = record.getBook();
+        if (book.getQuantity() <= 0) {
+            throw new IllegalStateException("No copies available to borrow");
+        }
+
+        record.setStatus(BorrowRecord.Status.BORROWED);
+        record.setIssuedDate(new Date());
+
+        book.setQuantity(book.getQuantity() - 1);
+        book.setStatus(book.getQuantity() == 0 ? Book.Status.ISSUED : Book.Status.AVAILABLE);
+        bookRepository.save(book);
+
+        return borrowRepository.save(record);
+    }
+
+    @Transactional
+    public BorrowRecord requestReturn(Long recordId) {
+        BorrowRecord record = borrowRepository.findById(recordId)
+                .orElseThrow(() -> new IllegalStateException("Borrow record not found"));
+
+        if (record.getStatus() != BorrowRecord.Status.BORROWED) {
+            throw new IllegalStateException("Book is not currently borrowed");
+        }
+
+        record.setStatus(BorrowRecord.Status.PENDING_RETURN);
+        return borrowRepository.save(record);
+    }
+
+    @Transactional
+    public BorrowRecord approveReturn(Long recordId) {
+        BorrowRecord record = borrowRepository.findById(recordId)
+                .orElseThrow(() -> new IllegalStateException("Borrow record not found"));
+
+        if (record.getStatus() != BorrowRecord.Status.PENDING_RETURN) {
+            throw new IllegalStateException("This request is not pending return approval");
+        }
+
+        record.setStatus(BorrowRecord.Status.RETURNED);
+        record.setReturnDate(new Date());
+
+        Book book = record.getBook();
+        book.setQuantity(book.getQuantity() + 1);
+        book.setStatus(Book.Status.AVAILABLE);
+        bookRepository.save(book);
+
+        return borrowRepository.save(record);
+    }
+
+    @Transactional
     public BorrowRecord returnBook(Long recordId) {
         log.info("Return request received for borrowRecordId={} " + recordId);
 
@@ -181,5 +283,47 @@ public class BorrowService {
 
         return borrowed;
     }
+    @Transactional
+    public BorrowRecord rejectBorrow(Long recordId) {
+        BorrowRecord record = borrowRepository.findById(recordId)
+                .orElseThrow(() -> new IllegalStateException("Borrow record not found"));
+
+        if (record.getStatus() != BorrowRecord.Status.PENDING_BORROW) {
+            throw new IllegalStateException("This request is not pending borrow approval");
+        }
+
+        record.setStatus(BorrowRecord.Status.REJECTED);
+        return borrowRepository.save(record);
+    }
+
+    @Transactional
+    public BorrowRecord rejectReturn(Long recordId) {
+        BorrowRecord record = borrowRepository.findById(recordId)
+                .orElseThrow(() -> new IllegalStateException("Return request not found"));
+
+        if (record.getStatus() != BorrowRecord.Status.PENDING_RETURN) {
+            throw new IllegalStateException("This request is not pending return approval");
+        }
+
+        record.setStatus(BorrowRecord.Status.BORROWED); // keep it borrowed
+        return borrowRepository.save(record);
+    }
+    public List<BorrowRecord> getPendingBorrowRequests() {
+        List<BorrowRecord> pending = borrowRepository.findAll()
+                .stream()
+                .filter(r -> r.getStatus() == BorrowRecord.Status.PENDING_BORROW)
+                .toList();
+
+        if (pending.isEmpty()) {
+            throw new RuntimeException("No pending borrow requests");
+        }
+        return pending;
+    }
+    public List<BorrowRecord> getPendingReturnRequests() {
+        return borrowRepository.findByStatus(BorrowRecord.Status.PENDING_RETURN);
+    }
+
+
+
 
 }

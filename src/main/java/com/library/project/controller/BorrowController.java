@@ -51,7 +51,31 @@ public class BorrowController {
 
         return ResponseEntity.ok(responseList);
     }
+    // User requests to borrow
+    @PostMapping("/request")
+    public ResponseEntity<BorrowResponseDTO> requestBorrow(@RequestBody BorrowRequestDTO request) {
+        BorrowRecord record = borrowService.requestBorrow(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(borrowService.toBorrowResponseDTO(record));
+    }
 
+    // Admin approves borrow
+    @PutMapping("/{recordId}/approve-borrow")
+    public ResponseEntity<BorrowResponseDTO> approveBorrow(@PathVariable Long recordId) {
+        BorrowRecord record = borrowService.approveBorrow(recordId);
+        return ResponseEntity.ok(borrowService.toBorrowResponseDTO(record));
+    }
+
+    // User requests return
+    @PutMapping("/{recordId}/request-return")
+    public ResponseEntity<BorrowResponseDTO> requestReturn(@PathVariable Long recordId) {
+        BorrowRecord record = borrowService.requestReturn(recordId);
+        return ResponseEntity.ok(borrowService.toBorrowResponseDTO(record));
+    }
+    @PutMapping("/{recordId}/approve-return")
+    public ResponseEntity<BorrowResponseDTO> approveReturn(@PathVariable Long recordId) {
+        BorrowRecord record = borrowService.approveReturn(recordId);
+        return ResponseEntity.ok(borrowService.toBorrowResponseDTO(record));
+    }
     @GetMapping("/borrowed")
     public ResponseEntity<List<BorrowResponseDTO>> getAllBorrowed() {
         List<BorrowRecord> borrowedRecords = borrowService.getAllBorrowedRecords();
@@ -78,4 +102,37 @@ public class BorrowController {
         BorrowRecord record = borrowService.returnBook(recordId);
         return ResponseEntity.ok(record);
     }
+    @PutMapping("/{recordId}/reject-borrow")
+    public ResponseEntity<BorrowResponseDTO> rejectBorrow(@PathVariable Long recordId) {
+        BorrowRecord record = borrowService.rejectBorrow(recordId);
+        return ResponseEntity.ok(borrowService.toBorrowResponseDTO(record));
+    }
+
+    @PutMapping("/{recordId}/reject-return")
+    public ResponseEntity<BorrowResponseDTO> rejectReturn(@PathVariable Long recordId) {
+        BorrowRecord record = borrowService.rejectReturn(recordId);
+        return ResponseEntity.ok(borrowService.toBorrowResponseDTO(record));
+    }
+    @GetMapping("/pending-borrows")
+    public ResponseEntity<List<BorrowResponseDTO>> getPendingBorrows() {
+        List<BorrowRecord> pending = borrowService.getPendingBorrowRequests();
+        List<BorrowResponseDTO> dtos = pending.stream()
+                .map(borrowService::toBorrowResponseDTO)
+                .toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/pending-returns")
+    public ResponseEntity<List<BorrowResponseDTO>> getPendingReturns() {
+        List<BorrowRecord> pending = borrowService.getPendingReturnRequests();
+        List<BorrowResponseDTO> dtos = pending.stream()
+                .map(borrowService::toBorrowResponseDTO)
+                .toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+
+
+
+
 }

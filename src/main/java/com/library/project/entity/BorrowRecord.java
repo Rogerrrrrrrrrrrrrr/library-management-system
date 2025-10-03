@@ -34,8 +34,12 @@ public class BorrowRecord {
     private Status status;
 
 
-    public enum Status{
-        BORROWED,RETURNED
+    public enum Status {
+        PENDING_BORROW,  // User requested borrow
+        BORROWED,        // Approved by Admin
+        PENDING_RETURN,  // User requested return
+        RETURNED,        // Approved return
+        REJECTED         // Admin rejected
     }
 
     public long getRecordId() {
